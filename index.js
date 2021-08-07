@@ -34,7 +34,15 @@ const embed = {
         const embed = new Discord.MessageEmbed()
         embed.setColor(balance === '0' ? 'a30000' : '00a300')
         embed.addField(`v${v} address`, address, true)
+        if (balance.includes('.')) balance = `**${balance.split('.')[0]}**.${balance.split('.')[1]}`
+        else balance = `**${balance}**`
         embed.addField('balance', balance, true)
+        return embed
+    },
+    address: (v1, v2) => {
+        const embed = new Discord.MessageEmbed()
+        embed.addField('v1 address', v1, true)
+        embed.addField('v2 address', v2, true)
         return embed
     }
 }
@@ -82,6 +90,24 @@ const commands = {
             const address = viscoin.base58.encode(viscoin.Address.convertToNormalAddress(buffer))
             const balance = await viscoin.HTTPApi.getBalanceOfAddress({ host, port }, address)
             message.reply({ embeds: [ embed.balance(2, address, balance) ] })
+        }
+        catch {
+            message.react('🚫')
+        }
+    },
+    address: (message, args) => {
+        const arg = args.shift()
+        try {
+            const buffer = viscoin.base58.decode(arg)
+            if (viscoin.Address.verifyChecksumAddress(buffer)) {
+                const v1 = viscoin.base58.encode(viscoin.Address.convertToNormalAddress(buffer))
+                return message.reply({ embeds: [ embed.address(v1, arg) ] })
+            }
+            if (viscoin.isValidAddress(arg)) {
+                const v2 = viscoin.base58.encode(viscoin.Address.convertToChecksumAddress(buffer))
+                return message.reply({ embeds: [ embed.address(arg, v2) ] })
+            }
+            message.react('🚫')
         }
         catch {
             message.react('🚫')
