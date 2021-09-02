@@ -27,13 +27,13 @@ const embed = {
         embed.addField('transactions', block.transactions.length.toString(), true)
         embed.addField('difficulty', block.difficulty.toString(), true)
         embed.addField('hash', block.hash.toString('hex'))
-        if (block.transactions[0]) embed.addField('miner', viscoin.base58.encode(viscoin.Address.convertToChecksumAddress(block.transactions[0].to)))
+        if (block.transactions[0]) embed.addField('miner', viscoin.Address.toString(block.transactions[0].to))
         return embed
     },
-    balance: (v, address, balance) => {
+    balance: (address, balance) => {
         const embed = new Discord.MessageEmbed()
         embed.setColor(balance === '0' ? 'a30000' : '00a300')
-        embed.addField(`v${v} address`, address, true)
+        embed.addField(`address`, address, true)
         if (balance.includes('.')) balance = `**${balance.split('.')[0]}**.${balance.split('.')[1]}`
         else balance = `**${balance}**`
         embed.addField('balance', balance, true)
@@ -79,17 +79,8 @@ const commands = {
     balance: async (message, args) => {
         const arg = args.shift()
         try {
-            const buffer = viscoin.base58.decode(arg)
-            if (!viscoin.Address.verifyChecksumAddress(buffer)) {
-                if (viscoin.isValidAddress(arg)) {
-                    const balance = await viscoin.HTTPApi.getBalanceOfAddress({ host, port }, arg)
-                    return message.reply({ embeds: [ embed.balance(1, arg, balance) ] })
-                }
-                return message.react('🚫')
-            }
-            const address = viscoin.base58.encode(viscoin.Address.convertToNormalAddress(buffer))
-            const balance = await viscoin.HTTPApi.getBalanceOfAddress({ host, port }, address)
-            message.reply({ embeds: [ embed.balance(2, address, balance) ] })
+            const balance = await viscoin.HTTPApi.getBalanceOfAddress({ host, port }, arg)
+            message.reply({ embeds: [ embed.balance(arg, balance) ] })
         }
         catch {
             message.react('🚫')
