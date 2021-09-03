@@ -52,13 +52,17 @@ const commands = {
         console.log(args)
         let str = 'https://viscoin.net/#/wallet?'
         const address = args.shift()
-        if (address) str += 'to=' + address
-        const amount = args.shift()
-        if (amount) str += '&amount=' + amount
-        const buffer = await qrcode.toBuffer(str, {
-            errorCorrectionLevel: 'L'
-        })
-        message.channel.send({content: `Send${amount ? ' ' + amount : ''} VIS to *${address}*`, files: [{name: "qr.png", attachment: buffer}]})
+        try {
+            if (Buffer.byteLength(viscoin.Address.toBuffer(address)) !== 20) return
+            if (address) str += 'to=' + address
+            const amount = args.shift()
+            if (amount) str += '&amount=' + amount
+            const buffer = await qrcode.toBuffer(str, {
+                errorCorrectionLevel: 'L'
+            })
+            message.channel.send({content: `Send${amount ? ' ' + amount : ''} VIS to *${address}*`, files: [{name: "qr.png", attachment: buffer}]})
+        }
+        catch {}
     },
     checksum: (message, args) => {
         try {
