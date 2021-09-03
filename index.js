@@ -1,6 +1,7 @@
 const Discord = require('discord.js')
 const viscoin = require('viscoin')
 const dotenv = require('dotenv')
+const qrcode = require('qrcode')
 dotenv.config()
 const bot = new Discord.Client({
     intents: [
@@ -47,6 +48,18 @@ const embed = {
     }
 }
 const commands = {
+    request: async (message, args) => {
+        console.log(args)
+        let str = 'https://viscoin.net/#/wallet?'
+        const address = args.shift()
+        if (address) str += 'to=' + address
+        const amount = args.shift()
+        if (amount) str += '&amount=' + amount
+        const buffer = await qrcode.toBuffer(str, {
+            errorCorrectionLevel: 'L'
+        })
+        message.channel.send({content: `Send${amount ? ' ' + amount : ''} VIS to *${address}*`, files: [{name: "qr.png", attachment: buffer}]})
+    },
     checksum: (message, args) => {
         try {
             const buffer = viscoin.base58.decode(args.shift())
