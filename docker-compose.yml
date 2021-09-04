@@ -1,0 +1,20 @@
+version: '3'
+services:
+    mongo:
+        container_name: mongo-bot
+        restart: always
+        image: mongo
+        command: --logpath /dev/null
+        ports:
+            - 27017:27017
+        volumes:
+            - ./db:/data/db
+    mongo-express:
+        image: mongo-express
+        environment:
+            - ME_CONFIG_MONGODB_SERVER=mongo
+            - ME_CONFIG_MONGODB_PORT=27017
+        depends_on:
+            - mongo
+        ports:
+            - "8888:8081"
