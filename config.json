@@ -1,5 +1,4 @@
 {
-    "connectionString": "mongodb://localhost:27017/viscoin-discord-bot",
     "prefix": "!",
     "maxBet": "20000",
     "confirmations": 1,
