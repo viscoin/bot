@@ -426,7 +426,7 @@ class Client extends Discord.Client {
                 footer: {
                     text: 'Expires'
                 },
-                image: {
+                thumbnail: {
                     url: 'attachment://qr.png'
                 }
             })
@@ -480,7 +480,7 @@ class Client extends Discord.Client {
             if (balance.includes('.')) balance = `**${balance.split('.')[0]}**.${balance.split('.')[1]}`
             else balance = `**${balance}**`
             const embed = new Discord.MessageEmbed({
-                image: {
+                thumbnail: {
                     url: 'attachment://qr.png'
                 },
                 color: balance === '0' ? '#a30000' : '#00a300',
@@ -540,7 +540,7 @@ class Client extends Discord.Client {
             if (transaction.to) embed.addField('to', Address.toString(transaction.to), true)
             if (transaction.amount) embed.addField('amount', transaction.amount, true)
             embed.addField('fee', transaction.minerFee, true)
-            embed.setImage('attachment://qr.png')
+            embed.setThumbnail('attachment://qr.png')
             embed.setURL(str)
             embed.setTitle('Click to open in Explorer')
             return {
@@ -575,7 +575,7 @@ class Client extends Discord.Client {
             embed.addField('transactions', block.transactions.length.toString(), true)
             embed.addField('difficulty', block.difficulty.toString(), true)
             embed.addField('hash', block.hash.toString('hex'))
-            embed.setImage('attachment://qr.png')
+            embed.setThumbnail('attachment://qr.png')
             embed.setURL(str)
             embed.setTitle('Click to open in Explorer')
             if (block.transactions[0]) embed.addField('miner', Address.toString(block.transactions[0].to))
