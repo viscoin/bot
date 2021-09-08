@@ -6,6 +6,7 @@ import * as config from '../config.json'
 import * as crypto from 'crypto'
 import * as mongoose from "mongoose"
 import * as qrcode from 'qrcode'
+import Coinbase from './Coinbase'
 
 interface Client extends Discord.Client {
     invites: Map<string, Discord.Collection<string, Discord.Invite>>
@@ -154,6 +155,24 @@ class Client extends Discord.Client {
             const command = args.shift()?.toLowerCase()
             if (this.commands[command]) this.commands[command](e, args)
         })
+        setTimeout(async function checkCoinbaseCharges() {
+            const users = await model_user.find({ coinbase_charge_code: { $exists: true } })
+            for (const user of users) {
+                const charge = await Coinbase.retrieveCharge(user.coinbase_charge_code)
+                if (!charge) continue
+                const event = charge.timeline[charge.timeline.length - 1]
+                console.log(charge.code, event.status)
+                if (event.status === 'COMPLETED') {
+                    console.log('COMPLETED')
+                    user.credits = beautifyBigInt(parseBigInt(user.credits) + parseBigInt(charge.metadata.amount))
+                }
+                if ([ 'COMPLETED', 'RESOLVED', 'EXPIRED', 'CANCELED', 'REFUNDED' ].includes(event.status)) {
+                    user.coinbase_charge_code = undefined
+                    await user.save()
+                }
+            }
+            setTimeout(checkCoinbaseCharges, 60000)
+        }, 3000)
     }
     async getUserById(id: string) {model_user
         let user = await model_user.findOne({ id })
@@ -273,25 +292,25 @@ class Client extends Discord.Client {
             }
             catch (e) { console.log(e)}
         },
-        withdraw: async (e, args) => {
+        withdraw: async (message, args) => {
             try {
-                const user = await model_user.findOne({ id: e.author.id })
+                const user = await model_user.findOne({ id: message.author.id })
                 if (!user) return
                 const amount = parseBigInt(args.shift())
                 if (!amount || amount <= 0n) return
-                if (amount > parseBigInt(user.credits)) return e.reply('You are too poor!')
+                if (amount > parseBigInt(user.credits)) return message.reply('You are too poor!')
                 const address = args.shift()
                 try {
-                    if (!Address.verifyChecksumAddress(base58.decode(address))) return e.reply('Invalid address!')
+                    if (!Address.verifyChecksumAddress(base58.decode(address))) return message.reply('Invalid address!')
                 }
                 catch {
-                    return e.reply('Invalid address!')
+                    return message.reply('Invalid address!')
                 }
                 user.credits = beautifyBigInt(parseBigInt(user.credits) - amount)
                 await user.save()
                 const { code, transaction } = await this.paymentProcessor.send(base58.encode(Address.toBuffer(address)), beautifyBigInt(amount))
                 console.log(`Withdrawal ${beautifyBigInt(amount)} --> ${address}, code: ${code}, fee: ${transaction.minerFee}`)
-                e.channel.send(`**Withdrawal** <@!${user.id}>\nWithdrawing \`${beautifyBigInt(amount)}\` VIS to \`${address}\`.\nPlease wait for the network to verify the transaction.`)
+                message.channel.send(`**Withdrawal** <@!${user.id}>\nWithdrawing \`${beautifyBigInt(amount)}\` VIS to \`${address}\`.\nPlease wait for the network to verify the transaction.`)
             }
             catch (err) {
                 console.log(err)
@@ -315,17 +334,17 @@ class Client extends Discord.Client {
             })
             message.reply(await Client.message.deposit(charge))
         },
-        cancel: async e => {
+        cancel: async message => {
             try {
-                const canceled = await this.paymentProcessor.cancelCharge({ userId: e.author.id })
-                if (canceled === true) return e.reply('Charge canceled.')
-                e.reply(`You don't have an active charge!`)
+                const canceled = await this.paymentProcessor.cancelCharge({ userId: message.author.id })
+                if (canceled === true) return message.reply('Charge canceled.')
+                message.reply(`You don't have an active charge!`)
             }
             catch (err) {
                 console.log(err)
             }
         },
-        bet: async (e, args) => {
+        bet: async (message, args) => {
             try {
                 const roll = Math.floor(Math.random() * 15)
                 let color = ''
@@ -334,26 +353,26 @@ class Client extends Discord.Client {
                 else color = 'black'
                 const str = `${base58.encode(crypto.randomBytes(16))} ${color} ${base58.encode(crypto.randomBytes(16))}`
                 const hash = crypto.createHash('sha256').update(str).digest('hex')
-                e.channel.send(`**Create bet** <@!${e.author.id}>\nHow much do you wan't to bet?\n\`${hash}\``)
-                const prompt_amount = await e.channel.awaitMessages(res => res.author.id === e.author.id, {
+                message.channel.send(`**Create bet** <@!${message.author.id}>\nHow much do you wan't to bet?\n\`${hash}\``)
+                const prompt_amount = await message.channel.awaitMessages(res => res.author.id === message.author.id, {
                     max: 1,
                     time: 30000
                 })
-                if(!prompt_amount.first()) return e.reply('You took too long to respond! try again')
+                if(!prompt_amount.first()) return message.reply('You took too long to respond! try again')
                 const amount = parseBigInt(prompt_amount.first().content.trim())
-                if (!amount) return e.reply('Invalid amount!')
-                if (amount > parseBigInt(config.maxBet)) return e.reply(`Sorry, your bet is bigger than the maximum allowed bet \`${config.maxBet}\`.`)
+                if (!amount) return message.reply('Invalid amount!')
+                if (amount > parseBigInt(config.maxBet)) return message.reply(`Sorry, your bet is bigger than the maximum allowed bet \`${config.maxBet}\`.`)
 
-                const user = await model_user.findOne({ id: e.author.id })
+                const user = await model_user.findOne({ id: message.author.id })
                 if (!user) return
-                if (amount > parseBigInt(user.credits)) return e.reply('You are too poor!')
+                if (amount > parseBigInt(user.credits)) return message.reply('You are too poor!')
 
-                e.channel.send(`**Create bet** <@!${e.author.id}>\nWhat color do you want to bet on?\n\`red\` \`black\` **2x** | **14x** \`green\``)
-                const prompt_color = await e.channel.awaitMessages(res => res.author.id === e.author.id, {
+                message.channel.send(`**Create bet** <@!${message.author.id}>\nWhat color do you want to bet on?\n\`red\` \`black\` **2x** | **14x** \`green\``)
+                const prompt_color = await message.channel.awaitMessages(res => res.author.id === message.author.id, {
                     max: 1,
                     time: 30000
                 })
-                if(!prompt_color.first()) return e.reply('You took too long to respond! try again')
+                if(!prompt_color.first()) return message.reply('You took too long to respond! try again')
 
                 const _color = prompt_color.first().content.trim().toLowerCase()
                 let multiplier = 1n
@@ -368,11 +387,11 @@ class Client extends Discord.Client {
                         multiplier = 14n
                         break
                     default:
-                        return e.reply('Specify a color to bet on!')
+                        return message.reply('Specify a color to bet on!')
                 }
 
                 const credits = parseBigInt(user.credits)
-                if (credits < amount) return e.reply('You are too poor!')
+                if (credits < amount) return message.reply('You are too poor!')
                 let emoji = ''
                 if (color === 'green') emoji = ':green_circle:'
                 else if (color === 'red') emoji = ':red_circle:'
@@ -380,37 +399,89 @@ class Client extends Discord.Client {
                 if (color === _color) {
                     user.credits = beautifyBigInt(credits - amount + amount * multiplier)
                     await user.save()
-                    e.channel.send(`**You won!** <@!${e.author.id}>\n${emoji} \`+${beautifyBigInt(amount * multiplier)}\`\n*You can verify that the string below matches the sha256 hash.*\n\`${str}\``)
+                    message.channel.send(`**You won!** <@!${message.author.id}>\n${emoji} \`+${beautifyBigInt(amount * multiplier)}\`\n*You can verify that the string below matches the sha256 hash.*\n\`${str}\``)
                 }
                 else {
                     user.credits = beautifyBigInt(credits - amount)
                     await user.save()
-                    e.channel.send(`**You lost!** <@!${e.author.id}>\n${emoji} \`-${beautifyBigInt(amount)}\`\n*You can verify that the string below matches the sha256 hash.*\n\`${str}\``)
+                    message.channel.send(`**You lost!** <@!${message.author.id}>\n${emoji} \`-${beautifyBigInt(amount)}\`\n*You can verify that the string below matches the sha256 hash.*\n\`${str}\``)
                 }
             }
             catch (err) {
                 console.log(err)
             }
         },
-        pay: async (e, args) => {
+        pay: async (message, args) => {
             try {
-                const mentioned_user = e.mentions.users.first()
-                if (!mentioned_user) return e.reply('No recipient specified.')
-                if (mentioned_user.bot) return e.reply(`You can't send credits to a bot!`)
+                const mentioned_user = message.mentions.users.first()
+                if (!mentioned_user) return message.reply('No recipient specified.')
+                if (mentioned_user.bot) return message.reply(`You can't send credits to a bot!`)
                 args = args.filter(e => !e.startsWith('<@!'))
                 const amount = parseBigInt(args.shift())
-                if (!amount || amount <= 0n) return e.reply('Invalid amount!')
+                if (!amount || amount <= 0n) return message.reply('Invalid amount!')
                 console.log('payment', amount, mentioned_user.id)
-                const sender = await this.getUserById(e.author.id)
-                if (parseBigInt(sender.credits) - amount < 0n) return e.reply('You are too poor!')
+                const sender = await this.getUserById(message.author.id)
+                if (parseBigInt(sender.credits) - amount < 0n) return message.reply('You are too poor!')
                 sender.credits = beautifyBigInt(parseBigInt(sender.credits) - amount)
                 await sender.save()
                 const receiver = await this.getUserById(mentioned_user.id)
                 receiver.credits = beautifyBigInt(parseBigInt(receiver.credits) + amount)
                 await receiver.save()
-                e.reply(Client.message.pay(amount, sender, receiver))
+                message.reply(Client.message.pay(amount, sender, receiver))
             }
             catch {}
+        },
+        buy: async (message, args) => {
+            if (!this.priceModifier) return message.channel.send('Price not set! Contact admin.')
+            const user = await this.getUserById(message.author.id)
+            const arg = args.shift()
+            if (arg) {
+                if (user.coinbase_charge_code) {
+                    const charge = await Coinbase.retrieveCharge(user.coinbase_charge_code)
+                    if (arg.toLowerCase() === 'cancel') {
+                        await Coinbase.cancelCharge(charge.code)
+                        user.coinbase_charge_code = undefined
+                        await user.save()
+                        message.reply('Canceled charge.')
+                    }
+                    else if (charge && ![ 'COMPLETED', 'RESOLVED', 'EXPIRED', 'CANCELED', 'REFUNDED' ].includes(charge.timeline[charge.timeline.length - 1].status)) message.reply(`You already have an active charge!\nDo \`${config.prefix}buy cancel\` to cancel it.`)
+                    return
+                }
+                const amount = parseBigInt(arg)
+                if (!amount || amount <= 0n) return message.reply('Invalid amount!')
+                if (parseFloat(this.getPrice(amount).toFixed(2)) === 0) return message.reply('Amount is too small')
+                const charge = await Coinbase.createCharge({
+                    description: `This will add ${beautifyBigInt(amount)} credits to ${message.author.tag}'s balance.`,
+                    metadata: {
+                        userId: message.author.id,
+                        amount: beautifyBigInt(amount)
+                    },
+                    name: `${beautifyBigInt(amount)} credits`,
+                    pricing_type: 'fixed_price',
+                    local_price: {
+                        amount: this.getPrice(amount).toFixed(2),
+                        currency: 'USD'
+                    }
+                })
+                if (!charge) return message.reply('Failed to create charge!')
+                user.coinbase_charge_code = charge.code
+                await user.save()
+                message.channel.send(await Client.message.coinbase_charge(charge))
+                return
+            }
+            const charge = await Coinbase.retrieveCharge(user.coinbase_charge_code)
+            if (charge) return message.channel.send(await Client.message.coinbase_charge(charge))
+            message.reply(`You don't have an active charge.`)
+        },
+        price: async (message, args) => {
+            message.channel.send(`\`1 credit = $${this.getPrice(parseBigInt('1'))}\``)
+        },
+        setprice: async (message, args) => {
+            if (!(message.member.permissions.bitfield & 0x8n)) return message.react('🚫')
+            const price = parseFloat(args.shift())
+            if (isNaN(price)) return message.react('🚫')
+            this.priceModifier = price
+            console.log(price)
         }
     }
     static message = {
@@ -601,7 +672,37 @@ class Client extends Discord.Client {
                     embed
                 ]
             }
+        },
+        coinbase_charge: async (charge) => {
+            const buffer = await qrcode.toBuffer(charge.hosted_url, {
+                errorCorrectionLevel: 'L'
+            })
+            const embed = new Discord.MessageEmbed({
+                color: '#1652f0',
+                description: `This will add **${charge.metadata.amount}** credits to <@${charge.metadata.userId}>'s balance.\nTo make a payment, follow the link below.\n**[Link To Payment](${charge.hosted_url})**`,
+                thumbnail: {
+                    url: 'attachment://qr.png'
+                },
+                timestamp: new Date(charge.expires_at).getTime(),
+                footer: {
+                    text: 'Expires'
+                }
+            })
+            return {
+                files: [
+                    {
+                        name: 'qr.png',
+                        attachment: buffer
+                    }
+                ],
+                embeds: [
+                    embed
+                ]
+            }
         }
+    }
+    getPrice(amount: bigint) {
+        return parseFloat(beautifyBigInt(amount)) * this.priceModifier
     }
 }
 export default Client
