@@ -24,11 +24,12 @@
     "dotenv": "^10.0.0",
     "mongoose": "^5.13.5",
     "qrcode": "^1.4.4",
-    "typedoc": "^0.21.9",
     "viscoin": "^1.5.0"
   },
   "devDependencies": {
     "@types/node": "^16.7.10",
+    "gh-pages": "^3.2.3",
+    "typedoc": "^0.21.9",
     "typescript": "^4.4.2"
   }
 }
