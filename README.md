@@ -5,8 +5,10 @@
 A bot that bridges Viscoin to Discord.
 
 ## Installation
-```
+```bash
 git clone https://github.com/viscoin/bot
+```
+```bash
 npm install
 ```
 

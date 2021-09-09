@@ -9,8 +9,6 @@ import * as qrcode from 'qrcode'
 import Coinbase from './Coinbase'
 
 interface Client extends Discord.Client {
-    invites: Map<string, Discord.Collection<string, Discord.Invite>>
-    filter: Array<string>
     tcpClient
     addresses: Array<string>
     charges: Map<string, {
@@ -61,8 +59,6 @@ class Client extends Discord.Client {
             transaction: new Set()
         }
         console.log(`Loaded wallet ${Address.toString(Address.fromPrivateKey(base58.decode(process.env.privateKey)))}`)
-        this.invites = new Map()
-        this.filter = []
         this.tcpClient = TCPApi.createClient()
         this.once('ready', () => {
             this.tcpClient.connect(this.TCP_API.port, this.TCP_API.host, true)
