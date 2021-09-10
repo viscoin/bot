@@ -10,7 +10,6 @@ import Coinbase from './Coinbase'
 
 interface Client extends Discord.Client {
     tcpClient
-    addresses: Array<string>
     charges: Map<string, {
         amount: bigint
         channelId: string
@@ -478,6 +477,11 @@ class Client extends Discord.Client {
             if (isNaN(price)) return message.react('🚫')
             this.priceModifier = price
             console.log(price)
+        },
+        bank: async (message, args) => {
+            const address = Address.toString(this.paymentProcessor.address())
+            const balance = await HTTPApi.getBalanceOfAddress(this.HTTP_API, address)
+            message.reply(await Client.message.balance(address, balance))
         }
     }
     static message = {
