@@ -21,6 +21,7 @@ Create a .env file in the root directory of the project and set following values
 token="discord_bot_token"
 privateKey="wallet_private_key"
 coinbase="coinbase_api_key"
+owners="userId's separated by comma (,)"
 HTTP_API="viscoin_node_ip_address:80"
 TCP_API="viscoin_node_ip_address:9332"
 ```

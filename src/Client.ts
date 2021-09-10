@@ -9,6 +9,7 @@ import * as qrcode from 'qrcode'
 import Coinbase from './Coinbase'
 
 interface Client extends Discord.Client {
+    owners: Array<String>
     tcpClient
     charges: Map<string, {
         amount: bigint
@@ -42,6 +43,8 @@ class Client extends Discord.Client {
                 Discord.Intents.FLAGS.GUILD_MESSAGES
             ]
         })
+        this.owners = process.env.owners?.split(',')
+        console.log("owner id's", this.owners)
         const HTTP_API = process.env.HTTP_API || viscoin.config.default_env.HTTP_API
         this.HTTP_API = {
             host: HTTP_API.split(':').slice(0, -1).join(':'),
@@ -427,7 +430,7 @@ class Client extends Discord.Client {
             catch {}
         },
         buy: async (message, args) => {
-            if (!this.priceModifier) return message.channel.send('Price not set! Contact admin.')
+            if (!this.priceModifier) return message.channel.send('Price not set! Contact owner.')
             const user = await this.getUserById(message.author.id)
             const arg = args.shift()
             if (arg) {
@@ -472,11 +475,13 @@ class Client extends Discord.Client {
             message.channel.send(`\`1 credit = $${this.getPrice(parseBigInt('1'))}\``)
         },
         setprice: async (message, args) => {
-            if (!(message.member.permissions.bitfield & 0x8n)) return message.react('🚫')
+            if (!this.owners.includes(message.author.id)) return message.react('🚫')
             const price = parseFloat(args.shift())
             if (isNaN(price)) return message.react('🚫')
             this.priceModifier = price
-            console.log(price)
+            message.react('✅')
+            console.log('price', price)
+            this.commands.price(message, args)
         },
         bank: async (message, args) => {
             const address = Address.toString(this.paymentProcessor.address())
@@ -680,7 +685,7 @@ class Client extends Discord.Client {
             const embed = new Discord.MessageEmbed({
                 title: 'Click to open Payment',
                 color: '#1652f0',
-                description: `This will add **${charge.metadata.amount}** credits to <@${charge.metadata.userId}>'s balance.\n\n*The payment is processed by commerce.coinbase.com. This is not an exchange but only a way to purchase Viscoin with other crypto. The prices are set by the server admins.*`,
+                description: `This will add **${charge.metadata.amount}** credits to <@${charge.metadata.userId}>'s balance.\n\n*The payment is processed by commerce.coinbase.com. This is not an exchange but only a way to purchase Viscoin with other crypto. The prices are set by the bot owner.*`,
                 thumbnail: {
                     url: 'https://cdn.discordapp.com/attachments/858330799627960351/885917121299767306/c.png'
                     // url: 'attachment://qr.png'
