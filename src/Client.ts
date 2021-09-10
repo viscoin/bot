@@ -674,27 +674,30 @@ class Client extends Discord.Client {
             }
         },
         coinbase_charge: async (charge) => {
-            const buffer = await qrcode.toBuffer(charge.hosted_url, {
-                errorCorrectionLevel: 'L'
-            })
+            // const buffer = await qrcode.toBuffer(charge.hosted_url, {
+            //     errorCorrectionLevel: 'L'
+            // })
             const embed = new Discord.MessageEmbed({
+                title: 'Click to open Payment',
                 color: '#1652f0',
-                description: `This will add **${charge.metadata.amount}** credits to <@${charge.metadata.userId}>'s balance.\nTo make a payment, follow the link below.\n**[Link To Payment](${charge.hosted_url})**`,
+                description: `This will add **${charge.metadata.amount}** credits to <@${charge.metadata.userId}>'s balance.\n\n*The payment is processed by commerce.coinbase.com. This is not an exchange but only a way to purchase Viscoin with other crypto. The prices are set by the server admins.*`,
                 thumbnail: {
-                    url: 'attachment://qr.png'
+                    url: 'https://cdn.discordapp.com/attachments/858330799627960351/885917121299767306/c.png'
+                    // url: 'attachment://qr.png'
                 },
                 timestamp: new Date(charge.expires_at).getTime(),
                 footer: {
                     text: 'Expires'
                 }
             })
+            embed.setURL(charge.hosted_url)
             return {
-                files: [
-                    {
-                        name: 'qr.png',
-                        attachment: buffer
-                    }
-                ],
+                // files: [
+                //     {
+                //         name: 'qr.png',
+                //         attachment: buffer
+                //     }
+                // ],
                 embeds: [
                     embed
                 ]
