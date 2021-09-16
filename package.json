@@ -24,7 +24,7 @@
     "dotenv": "^10.0.0",
     "mongoose": "^5.13.5",
     "qrcode": "^1.4.4",
-    "viscoin": "^1.5.0"
+    "viscoin": "^1.6.0"
   },
   "devDependencies": {
     "@types/node": "^16.7.10",
