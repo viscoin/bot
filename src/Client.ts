@@ -491,7 +491,7 @@ class Client extends Discord.Client {
         hashrate: async (message, args) => {
             const block = await HTTPApi.getLatestBlock(this.HTTP_API)
             const difficulty = block.difficulty
-            const hashrate = (2**(difficulty >> 4) / 60).toPrecision(3)
+            const hashrate = (2**(difficulty / 16) / 60).toPrecision(3)
             const target = viscoin.Block.getDifficultyBuffer(difficulty)
             message.channel.send(`\`difficulty: ${difficulty}\`\n\`approximate hashrate: ${hashrate}\`\n\`target: ${target.toString('hex')}\``)
         }
