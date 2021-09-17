@@ -487,6 +487,13 @@ class Client extends Discord.Client {
             const address = Address.toString(this.paymentProcessor.address())
             const balance = await HTTPApi.getBalanceOfAddress(this.HTTP_API, address)
             message.reply(await Client.message.balance(address, balance))
+        },
+        hashrate: async (message, args) => {
+            const block = await HTTPApi.getLatestBlock(this.HTTP_API)
+            const difficulty = block.difficulty
+            const hashrate = (2**(difficulty >> 4) / 60).toPrecision(3)
+            const target = viscoin.Block.getDifficultyBuffer(difficulty)
+            message.channel.send(`\`difficulty: ${difficulty}\`\n\`approximate hashrate: ${hashrate}\`\n\`target: ${target.toString('hex')}\``)
         }
     }
     static message = {
