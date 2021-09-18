@@ -33,6 +33,7 @@ interface Client extends Discord.Client {
     liveFeed: {
         block: Set<string>
         transaction: Set<string>
+        height
     }
 }
 class Client extends Discord.Client {
@@ -57,6 +58,7 @@ class Client extends Discord.Client {
         }
         this.charges = new Map()
         this.liveFeed = {
+            height: 0,
             block: new Set(),
             transaction: new Set()
         }
@@ -121,6 +123,8 @@ class Client extends Discord.Client {
                 console.log(`Withdrawing all balance from ${base58.encode(transaction.from)}, code: ${code}`)
             })
             this.tcpClient.on('block', async block => {
+                if (block.height < this.liveFeed.height) return
+                this.liveFeed.height = block.height
                 for (const channelId of this.liveFeed.block) {
                     const channel = <Discord.TextChannel> this.channels.cache.get(channelId)
                     channel.send(await Client.message.block(block))
