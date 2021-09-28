@@ -205,7 +205,7 @@ class Client extends Discord.Client {
             //     ...data
             // }).save()
             if (await model_listing.exists({ userId: message.author.id, type })) {
-                await model_listing.findOneAndUpdate({ userId: message.author.id }, data)
+                await model_listing.findOneAndUpdate({ userId: message.author.id, type }, data)
             }
             else {
                 await new model_listing({
