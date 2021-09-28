@@ -1,5 +1,6 @@
 import * as Discord from "discord.js"
 import model_user from './mongoose/model/user'
+import model_listing from './mongoose/model/listing'
 import { TCPApi, base58, HTTPApi, beautifyBigInt, parseBigInt, Address, PaymentProcessor, Transaction, isValidAddress } from 'viscoin'
 import * as viscoin from 'viscoin'
 import * as config from '../config.json'
@@ -185,6 +186,31 @@ class Client extends Discord.Client {
         return user
     }
     commands = {
+        listings: async(message, args) => {
+            const listings = await model_listing.find({})
+            message.reply(Client.message.listings(listings))
+        },
+        list: async(message, args) => {
+            const amount = parseFloat(args.shift())
+            if (isNaN(amount)) return
+            const price = parseFloat(args.shift())
+            if (isNaN(price)) return
+            const data = {
+                amount: amount.toString(),
+                price: price.toString(),
+                timestamp: Date.now(),
+                type: 'sell'
+            }
+            if (await model_listing.exists({ userId: message.author.id })) {
+                await model_listing.findOneAndUpdate({ userId: message.author.id }, data)
+            }
+            else {
+                await new model_listing({
+                    userId: message.author.id,
+                    ...data
+                }).save()
+            }
+        },
         live: async (message, args) => {
             if (!(message.member.permissions.bitfield & 0x8n)) return message.react('🚫')
             const type = args.shift()
@@ -501,6 +527,19 @@ class Client extends Discord.Client {
         }
     }
     static message = {
+        listings: (listings) => {
+            const embed = new Discord.MessageEmbed({
+                title: 'Listings'
+            })
+            for (const listing of listings) {
+                embed.addField(`<@${listing.userId}>`, `${listing.type} ${listing.amount} for ${listing.price} each`)
+            }
+            return {
+                embeds: [
+                    embed
+                ]
+            }
+        },
         deposit: async (charge) => {
             const str = `https://viscoin.net/#/wallet?to=${charge.address}&amount=${charge.amount}`
             const buffer = await qrcode.toBuffer(str, {
