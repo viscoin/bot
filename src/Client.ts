@@ -191,17 +191,20 @@ class Client extends Discord.Client {
             message.reply(Client.message.listings(listings))
         },
         list: async(message, args) => {
-            const amount = parseFloat(args.shift())
-            if (isNaN(amount)) return
+            const type = args.shift()
+            if (![ 'sell', 'buy' ].includes(type)) return message.react('🚫')
             const price = parseFloat(args.shift())
-            if (isNaN(price)) return
+            if (isNaN(price)) return message.react('🚫')
             const data = {
-                amount: amount.toString(),
-                price: price.toString(),
-                timestamp: Date.now(),
-                type: 'sell'
+                type,
+                price,
+                timestamp: Date.now()
             }
-            if (await model_listing.exists({ userId: message.author.id })) {
+            // await new model_listing({
+            //     userId: message.author.id,
+            //     ...data
+            // }).save()
+            if (await model_listing.exists({ userId: message.author.id, type })) {
                 await model_listing.findOneAndUpdate({ userId: message.author.id }, data)
             }
             else {
@@ -210,6 +213,17 @@ class Client extends Discord.Client {
                     ...data
                 }).save()
             }
+        },
+        unlist: async(message, args) => {
+            const type = args.shift()
+            if (![ 'sell', 'buy' ].includes(type)) return message.react('🚫')
+            if (await model_listing.exists({ userId: message.author.id, type })) {
+                await model_listing.deleteOne({ userId: message.author.id })
+            }
+        },
+        clearlist: async(message, args) => {
+            if (!(message.member.permissions.bitfield & 0x8n)) return message.react('🚫')
+            await model_listing.deleteMany({})
         },
         live: async (message, args) => {
             if (!(message.member.permissions.bitfield & 0x8n)) return message.react('🚫')
@@ -529,11 +543,17 @@ class Client extends Discord.Client {
     static message = {
         listings: (listings) => {
             const embed = new Discord.MessageEmbed({
-                title: 'Listings'
+                title: 'Viscoin Market 🛒'
             })
-            for (const listing of listings) {
-                embed.addField(`<@${listing.userId}>`, `${listing.type} ${listing.amount} for ${listing.price} each`)
+            listings = listings.sort((a, b) => a.timestamp - b.timestamp).slice(-config.listingsMax)
+            const sell = listings.filter(e => e.type === 'sell').sort((a, b) => a.price - b.price)
+            const buy = listings.filter(e => e.type === 'buy').sort((b, a) => a.price - b.price)
+            const _listings = [ ...buy, ...sell ]
+            for (let i = 0; i < _listings.length; i++) {
+                const listing = _listings[i]
+                embed.addField(`${i + 1}.`, `<@${listing.userId}> - **${listing.type}**, price: **$${listing.price}**`)
             }
+            if (!_listings.length) embed.setDescription('There are currently no listings.')
             return {
                 embeds: [
                     embed

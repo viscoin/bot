@@ -2,5 +2,6 @@
     "prefix": "!",
     "maxBet": "20000",
     "confirmations": 1,
-    "chargeExpiresAfter": 3600000
+    "chargeExpiresAfter": 3600000,
+    "listingsMax": 30
 }
