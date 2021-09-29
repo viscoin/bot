@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "c": "tsc && node .",
+    "c": "tsc",
     "docs": "typedoc docs.ts --out dist --hideGenerator",
     "deploy": "gh-pages -d dist"
   },
@@ -22,9 +22,9 @@
   "dependencies": {
     "discord.js": "^13.0.1",
     "dotenv": "^10.0.0",
-    "mongoose": "^5.13.5",
+    "level": "^7.0.0",
     "qrcode": "^1.4.4",
-    "viscoin": "^1.6.0"
+    "viscoin": "^1.7.2"
   },
   "devDependencies": {
     "@types/node": "^16.7.10",
