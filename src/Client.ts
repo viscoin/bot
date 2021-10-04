@@ -432,10 +432,18 @@ class Client extends Discord.Client {
                 if (roll === 14) color = 'green'
                 else if (roll % 2 === 0) color = 'red'
                 else color = 'black'
-                const str = `${base58.encode(crypto.randomBytes(16))} ${color} ${base58.encode(crypto.randomBytes(16))}`
+                const str = `${color.toUpperCase()}_${base58.encode(crypto.randomBytes(32))}`
                 const hash = crypto.createHash('sha256').update(str).digest('hex')
-                message.channel.send(`**Create bet** <@!${message.author.id}>\nHow much do you wan't to bet?\n\`${hash}\``)
-                const prompt_amount = await message.channel.awaitMessages(res => res.author.id === message.author.id, {
+                message.channel.send({
+                    embeds: [
+                        new Discord.MessageEmbed({
+                            description: `Enter **amount** to bet <@!${message.author.id}>\n\`${hash}\``
+                        })
+                    ]
+                })
+                const filter = res => res.author.id === message.author.id
+                const prompt_amount = await message.channel.awaitMessages({
+                    filter,
                     max: 1,
                     time: 30000
                 })
@@ -443,18 +451,25 @@ class Client extends Discord.Client {
                 const amount = parseBigInt(prompt_amount.first().content.trim())
                 if (!amount) return message.reply('Invalid amount!')
                 if (amount > parseBigInt(config.maxBet)) return message.reply(`Sorry, your bet is bigger than the maximum allowed bet \`${config.maxBet}\`.`)
-
                 const user = await this.getUser(message.author.id)
                 if (!user) return
                 if (amount > parseBigInt(user.credits)) return message.reply('You are too poor!')
-
-                message.channel.send(`**Create bet** <@!${message.author.id}>\nWhat color do you want to bet on?\n\`red\` \`black\` **2x** | **14x** \`green\``)
-                const prompt_color = await message.channel.awaitMessages(res => res.author.id === message.author.id, {
+                message.channel.send({
+                    embeds: [
+                        new Discord.MessageEmbed({
+                            description: `Pick a **color** <@!${message.author.id}>`
+                        })
+                            .addField(':red_circle: **red**', '**2**x', true)
+                            .addField(':green_circle: **green**', '**14**x', true)
+                            .addField(':black_circle: **black**', '**2**x', true)
+                    ]
+                })
+                const prompt_color = await message.channel.awaitMessages({
+                    filter,
                     max: 1,
                     time: 30000
                 })
                 if(!prompt_color.first()) return message.reply('You took too long to respond! try again')
-
                 const _color = prompt_color.first().content.trim().toLowerCase()
                 let multiplier = 1n
                 switch (_color) {
@@ -468,24 +483,52 @@ class Client extends Discord.Client {
                         multiplier = 14n
                         break
                     default:
-                        return message.reply('Specify a color to bet on!')
+                        return message.reply('Invalid color!')
                 }
-
                 const credits = parseBigInt(user.credits)
                 if (credits < amount) return message.reply('You are too poor!')
-                let emoji = ''
-                if (color === 'green') emoji = ':green_circle:'
-                else if (color === 'red') emoji = ':red_circle:'
-                else if (color === 'black') emoji = ':black_circle:'
+                let description = `\n*You can verify that the string below matches the sha256 hash [here](https://emn178.github.io/online-tools/sha256.html).*\n\`${str}\``
+                let hex: any = null,
+                emoji = null
+                switch (color) {
+                    case 'red':
+                        hex = '#ff0000'
+                        emoji = ':red_circle:'
+                        break
+                    case 'black':
+                        hex = '#000000'
+                        emoji = ':black_circle:'
+                        break
+                    case 'green':
+                        hex = '#00ff00'
+                        emoji = ':green_circle:'
+                        break
+                }
                 if (color === _color) {
                     user.credits = beautifyBigInt(credits - amount + amount * multiplier)
                     await this.putUser(user)
-                    message.channel.send(`**You won!** <@!${message.author.id}>\n${emoji} \`+${beautifyBigInt(amount * multiplier)}\`\n*You can verify that the string below matches the sha256 hash.*\n\`${str}\``)
+                    description = `${emoji} **You won! \`+${beautifyBigInt(amount * multiplier)}\`** <@!${message.author.id}>` + description
+                    message.channel.send({
+                        embeds: [
+                            new Discord.MessageEmbed({
+                                description,
+                                color: hex
+                            })
+                        ]
+                    })
                 }
                 else {
                     user.credits = beautifyBigInt(credits - amount)
                     await this.putUser(user)
-                    message.channel.send(`**You lost!** <@!${message.author.id}>\n${emoji} \`-${beautifyBigInt(amount)}\`\n*You can verify that the string below matches the sha256 hash.*\n\`${str}\``)
+                    description = `${emoji} **You lost! \`-${beautifyBigInt(amount)}\`** <@!${message.author.id}>` + description
+                    message.channel.send({
+                        embeds: [
+                            new Discord.MessageEmbed({
+                                description,
+                                color: hex
+                            })
+                        ]
+                    })
                 }
             }
             catch (err) {
