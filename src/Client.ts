@@ -34,8 +34,8 @@ interface Client extends Discord.Client {
         port: number
     },
     liveFeed: {
-        block: Set<string>
-        transaction: Set<string>
+        blocks: Map<string, string>
+        transactions: Map<string, string>
         height
     }
 }
@@ -47,6 +47,10 @@ class Client extends Discord.Client {
                 Discord.Intents.FLAGS.GUILD_MESSAGES
             ]
         })
+        this.commands = {
+            ...this.commands,
+            ...this.commands_alias
+        }
         this.db = {
             users: usersDB,
             charges: chargesDB,
@@ -67,8 +71,8 @@ class Client extends Discord.Client {
         this.charges = new Map()
         this.liveFeed = {
             height: 0,
-            block: new Set(),
-            transaction: new Set()
+            blocks: new Map(),
+            transactions: new Map()
         }
         console.log(`Loaded wallet ${Address.toString(Address.fromPrivateKey(base58.decode(process.env.privateKey)))}`)
         this.tcpClient = TCPApi.createClient()
@@ -129,19 +133,19 @@ class Client extends Discord.Client {
             this.paymentProcessor.on('withdraw-all-balance', (code, transaction) => {
                 console.log(`Withdrawing all balance from ${base58.encode(transaction.from)}, code: ${code}`)
             })
-            this.tcpClient.on('block', async block => {
+            this.tcpClient.on('block', block => {
                 if (block.height < this.liveFeed.height) return
                 this.liveFeed.height = block.height
-                for (const channelId of this.liveFeed.block) {
+                this.liveFeed.blocks.forEach(async channelId => {
                     const channel = <Discord.TextChannel> this.channels.cache.get(channelId)
                     channel.send(await Client.message.block(block))
-                }
+                })
             })
             this.tcpClient.on('transaction', async transaction => {
-                for (const channelId of this.liveFeed.transaction) {
+                this.liveFeed.transactions.forEach(async channelId => {
                     const channel = <Discord.TextChannel> this.channels.cache.get(channelId)
                     channel.send(await Client.message.transaction(transaction))
-                }
+                })
             })
         })
         this.on('ready', () => console.log(`Logged in as ${this.user.tag}!`))
@@ -209,6 +213,10 @@ class Client extends Discord.Client {
         await this.db.users.put(id, user)
     }
     commands = {
+        commands: (message, args) => {
+            const commands = Object.keys(this.commands)
+            message.reply(commands.join(', '))
+        },
         market: async(message, args) => {
             const listings = []
             const stream = this.db.market.createReadStream()
@@ -221,9 +229,9 @@ class Client extends Discord.Client {
         },
         list: async(message, args) => {
             const type = args.shift()
-            if (![ 'sell', 'buy' ].includes(type)) return message.react('🚫')
+            if (![ 'sell', 'buy' ].includes(type)) return this.reject(message)
             const price = parseFloat(args.shift())
-            if (isNaN(price)) return message.react('🚫')
+            if (isNaN(price)) return this.reject(message)
             const data = {
                 type,
                 price,
@@ -235,33 +243,41 @@ class Client extends Discord.Client {
             await this.db.market.del(message.author.id)
         },
         marketclear: async(message, args) => {
-            if (!(message.member.permissions.bitfield & 0x8n)) return message.react('🚫')
+            if (!this.owners.includes(message.author.id)) return this.reject(message)
             await this.db.market.clear()
         },
-        live: async (message, args) => {
-            if (!(message.member.permissions.bitfield & 0x8n)) return message.react('🚫')
+        livefeed: async (message, args) => {
+            if (!(message.member.permissions.bitfield & 0x8n)) return this.reject(message)
             const type = args.shift()
-            if (type === 'block') {
-                if (this.liveFeed.block.has(message.channel.id)) {
-                    this.liveFeed.block.delete(message.channel.id)
-                    message.reply('Block live feed turned: off')
+            if (type === 'blocks') {
+                const channelId = this.liveFeed.blocks.get(message.guild.id)
+                if (channelId === message.channel.id) {
+                    this.liveFeed.blocks.delete(message.channel.id)
+                    message.reply('Turned **off** live feed for **blocks**.')
+                }
+                else if (channelId) {
+                    message.reply(`You can only subscribe to **blocks** in one channel per guild.\nCurrently subscribed to **blocks** in: <#${channelId}>`)
                 }
                 else {
-                    this.liveFeed.block.add(message.channel.id)
-                    message.reply('Block live feed turned: on')
+                    this.liveFeed.blocks.set(message.guild.id, message.channel.id)
+                    message.reply('Turned **on** live feed for **blocks**.')
                 }
             }
-            else if (type === 'transaction') {
-                if (this.liveFeed.transaction.has(message.channel.id)) {
-                    this.liveFeed.transaction.delete(message.channel.id)
-                    message.reply('Transaction live feed turned: off')
+            else if (type === 'transactions') {
+                const channelId = this.liveFeed.transactions.get(message.guild.id)
+                if (channelId === message.channel.id) {
+                    this.liveFeed.transactions.delete(message.channel.id)
+                    message.reply('Turned **off** live feed for **transactions**.')
+                }
+                else if (channelId) {
+                    message.reply(`You can only subscribe to **transactions** in one channel per guild.\nCurrently subscribed to **transactions** in: <#${channelId}>`)
                 }
                 else {
-                    this.liveFeed.transaction.add(message.channel.id)
-                    message.reply('Transaction live feed turned: on')
+                    this.liveFeed.transactions.set(message.guild.id, message.channel.id)
+                    message.reply('Turned **on** live feed for **transactions**.')
                 }
             }
-            else message.react('🚫')
+            else this.reject(message)
         },
         request: async (message, args) => {
             let str = 'https://viscoin.net/#/wallet?'
@@ -274,9 +290,11 @@ class Client extends Discord.Client {
                 const buffer = await qrcode.toBuffer(str, {
                     errorCorrectionLevel: 'L'
                 })
-                message.channel.send({content: `Send${amount ? ' ' + amount : ''} VIS to *${address}*`, files: [{name: "qr.png", attachment: buffer}]})
+                message.channel.send({content: `Send${amount ? ' ' + `**${amount}**` : ''} Viscoin to ***${address}***`, files: [{name: "qr.png", attachment: buffer}]})
             }
-            catch {}
+            catch {
+                this.reject(message)
+            }
         },
         checksum: (message, args) => {
             try {
@@ -284,7 +302,7 @@ class Client extends Discord.Client {
                 message.react(Address.verifyChecksumAddress(buffer) ? '✅' : '🚫')
             }
             catch {
-                message.react('🚫')
+                this.reject(message)
             }
         },
         block: async (message, args) => {
@@ -302,19 +320,19 @@ class Client extends Discord.Client {
             }
             catch {}
             const height = parseInt(arg)
-            if (height.toString() !== arg) return message.react('🚫')
+            if (height.toString() !== arg) return this.reject(message)
             const block = await HTTPApi.getBlockByHeight(this.HTTP_API, height)
             message.reply(await Client.message.block(block))
         },
         balance: async (message, args) => {
             const address = args.shift()
             try {
-                if (!Address.verifyChecksumAddress(base58.decode(address))) return message.react('🚫')
+                if (!Address.verifyChecksumAddress(base58.decode(address))) return this.reject(message)
                 const balance = await HTTPApi.getBalanceOfAddress(this.HTTP_API, address)
                 message.reply(await Client.message.balance(address, balance))
             }
             catch {
-                message.react('🚫')
+                this.reject(message)
             }
         },
         address: (message, args) => {
@@ -329,10 +347,10 @@ class Client extends Discord.Client {
                     const v2 = base58.encode(Address.convertToChecksumAddress(buffer))
                     return message.reply(Client.message.address(arg, v2))
                 }
-                message.react('🚫')
+                this.reject(message)
             }
             catch {
-                message.react('🚫')
+                this.reject(message)
             }
         },
         credits: async (message) => {
@@ -478,7 +496,8 @@ class Client extends Discord.Client {
             try {
                 const mentioned_user = message.mentions.users.first()
                 if (!mentioned_user) return message.reply('No recipient specified.')
-                if (mentioned_user.bot) return message.reply(`You can't send credits to a bot!`)
+                if (mentioned_user.bot) return this.reject(message, `You can't send credits to a bot!`)
+                if (mentioned_user.id === message.author.id) return this.reject(message)
                 args = args.filter(e => !e.startsWith('<@!'))
                 const amount = parseBigInt(args.shift())
                 if (!amount || amount <= 0n) return message.reply('Invalid amount!')
@@ -490,7 +509,7 @@ class Client extends Discord.Client {
                 const receiver = await this.getUser(mentioned_user.id)
                 receiver.credits = beautifyBigInt(parseBigInt(receiver.credits) + amount)
                 await this.putUser(receiver)
-                message.reply(Client.message.pay(amount, sender, receiver))
+                message.reply(Client.message.pay(amount, message.author.id, mentioned_user.id))
             }
             catch {}
         },
@@ -540,9 +559,9 @@ class Client extends Discord.Client {
             message.channel.send(`\`1 credit = $${this.getPrice(parseBigInt('1'))}\``)
         },
         setprice: async (message, args) => {
-            if (!this.owners.includes(message.author.id)) return message.react('🚫')
+            if (!this.owners.includes(message.author.id)) return this.reject(message)
             const price = parseFloat(args.shift())
-            if (isNaN(price)) return message.react('🚫')
+            if (isNaN(price)) return this.reject(message)
             this.priceModifier = price
             message.react('✅')
             console.log('price', price)
@@ -556,10 +575,18 @@ class Client extends Discord.Client {
         hashrate: async (message, args) => {
             const block = await HTTPApi.getLatestBlock(this.HTTP_API)
             const difficulty = block.difficulty
-            const hashrate = (2**(difficulty / 16) / 60).toPrecision(3)
-            const target = viscoin.Block.getDifficultyBuffer(difficulty)
-            message.channel.send(`\`difficulty: ${difficulty}\`\n\`approximate hashrate: ${hashrate}\`\n\`target: ${target.toString('hex')}\``)
+            const hashrate = 2**(difficulty / 16) / 60
+            message.channel.send(`\`approx hashrate: ${hashrate.toPrecision(3)} (${Math.round(hashrate)}) H/s\``)
+        },
+        difficulty: async(message, args) => {
+            const block = await HTTPApi.getLatestBlock(this.HTTP_API)
+            const difficulty = block.difficulty
+            message.channel.send(`\`difficulty: ${difficulty}\``)
         }
+    }
+    commands_alias = {
+        subscribe: this.commands.livefeed,
+        help: this.commands.commands
     }
     static message = {
         listings: (listings) => {
@@ -623,10 +650,10 @@ class Client extends Discord.Client {
                 ]
             }
         },
-        pay: (amount, sender, receiver) => {
+        pay: (amount, senderId, receiverId) => {
             const embed = new Discord.MessageEmbed({
                 title: 'Payment',
-                description: `**\`-${beautifyBigInt(amount)}\`** <@${sender.id}>\n**\`+${beautifyBigInt(amount)}\`** <@${receiver.id}>`,
+                description: `**\`-${beautifyBigInt(amount)}\`** <@${senderId}>\n**\`+${beautifyBigInt(amount)}\`** <@${receiverId}>`,
                 thumbnail: {
                     url: 'https://cdn.discordapp.com/attachments/858330799627960351/858331288108924938/viscoin.png'
                 },
@@ -816,6 +843,10 @@ class Client extends Discord.Client {
     }
     getPrice(amount: bigint) {
         return parseFloat(beautifyBigInt(amount)) * this.priceModifier
+    }
+    reject(message, reply: string | null = null) {
+        message.react('🚫')
+        if (reply) message.reply(reply)
     }
 }
 export default Client
