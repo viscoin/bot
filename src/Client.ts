@@ -383,7 +383,7 @@ class Client extends Discord.Client {
                 await this.putUser(user)
                 const { code, transaction } = await this.paymentProcessor.send(base58.encode(Address.toBuffer(address)), beautifyBigInt(amount))
                 console.log(`Withdrawal ${beautifyBigInt(amount)} --> ${address}, code: ${code}, fee: ${transaction.minerFee}`)
-                message.channel.send(`**Withdrawal** <@!${user.id}>\nWithdrawing \`${beautifyBigInt(amount)}\` VIS to \`${address}\`.\nPlease wait for the network to verify the transaction.`)
+                message.channel.send(`**Withdrawal** <@!${message.author.id}>\nWithdrawing **\`${beautifyBigInt(amount)}\`** Viscoin to **\`${address}\`**.\nPlease wait for the network to verify the transaction.`)
             }
             catch (err) {
                 console.log(err)
