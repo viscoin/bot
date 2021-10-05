@@ -66,28 +66,22 @@
 				<a href="#installation" id="installation" style="color: inherit; text-decoration: none;">
 					<h2>Installation</h2>
 				</a>
-				<pre><code class="language-bash"><span style="color: #000000">git clone https://github.com/viscoin/bot</span>
-</code></pre>
-				<pre><code class="language-bash"><span style="color: #000000">npm install</span>
-</code></pre>
-				<a href="#usage" id="usage" style="color: inherit; text-decoration: none;">
-					<h2>Usage</h2>
-				</a>
+				<ol>
+					<li><code>git clone https://github.com/viscoin/bot</code></li>
+					<li><code>cd bot</code></li>
+					<li><code>npm run setup</code></li>
+				</ol>
 				<a href="#environment-variables" id="environment-variables" style="color: inherit; text-decoration: none;">
 					<h3>Environment Variables</h3>
 				</a>
 				<p>Create a .env file in the root directory of the project and set following values.</p>
-				<pre><code><span style="color: #001080">token</span><span style="color: #000000">=</span><span style="color: #A31515">&quot;discord_bot_token&quot;</span>
-<span style="color: #001080">privateKey</span><span style="color: #000000">=</span><span style="color: #A31515">&quot;wallet_private_key&quot;</span>
-<span style="color: #001080">coinbase</span><span style="color: #000000">=</span><span style="color: #A31515">&quot;coinbase_api_key&quot;</span>
-<span style="color: #001080">owners</span><span style="color: #000000">=</span><span style="color: #A31515">&quot;userId&#039;s separated by comma (,)&quot;</span>
-<span style="color: #0070C1">HTTP_API</span><span style="color: #000000">=</span><span style="color: #A31515">&quot;viscoin_node_ip_address:80&quot;</span>
-<span style="color: #0070C1">TCP_API</span><span style="color: #000000">=</span><span style="color: #A31515">&quot;viscoin_node_ip_address:9332&quot;</span>
+				<pre><code class="language-json"><span style="color: #000000">token=</span><span style="color: #A31515">&quot;discord_bot_token&quot;</span>
+<span style="color: #000000">privateKey=</span><span style="color: #A31515">&quot;wallet_private_key&quot;</span>
+<span style="color: #000000">coinbase=</span><span style="color: #A31515">&quot;coinbase_api_key&quot;</span>
+<span style="color: #000000">owners=</span><span style="color: #A31515">&quot;userId&#039;s separated by comma (,)&quot;</span>
+<span style="color: #000000">HTTP_API=</span><span style="color: #A31515">&quot;viscoin_node_ip_address:80&quot;</span>
+<span style="color: #000000">TCP_API=</span><span style="color: #A31515">&quot;viscoin_node_ip_address:9332&quot;</span>
 </code></pre>
-				<a href="#mongodb" id="mongodb" style="color: inherit; text-decoration: none;">
-					<h3>MongoDB</h3>
-				</a>
-				<p>Setup MongoDB either locally through the traditional installer or via docker. It is also possible to connect to a remote db by changing the value of connectionString in config.json.</p>
 				<a href="#contributing" id="contributing" style="color: inherit; text-decoration: none;">
 					<h2>Contributing</h2>
 				</a>
