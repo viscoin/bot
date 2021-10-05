@@ -6,7 +6,8 @@
   "scripts": {
     "c": "tsc",
     "docs": "typedoc docs.ts --out dist --hideGenerator",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -d dist",
+    "setup": "npm i && tsc"
   },
   "repository": {
     "type": "git",

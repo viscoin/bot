@@ -5,19 +5,14 @@
 A bot that bridges Viscoin to Discord.
 
 ## Installation
-```bash
-git clone https://github.com/viscoin/bot
-```
-```bash
-npm install
-```
-
-## Usage
+1. `git clone https://github.com/viscoin/bot`
+2. `cd bot`
+3. `npm run setup`
 
 ### Environment Variables
 
 Create a .env file in the root directory of the project and set following values.
-```
+```json
 token="discord_bot_token"
 privateKey="wallet_private_key"
 coinbase="coinbase_api_key"
@@ -25,10 +20,6 @@ owners="userId's separated by comma (,)"
 HTTP_API="viscoin_node_ip_address:80"
 TCP_API="viscoin_node_ip_address:9332"
 ```
-
-### MongoDB
-
-Setup MongoDB either locally through the traditional installer or via docker. It is also possible to connect to a remote db by changing the value of connectionString in config.json.
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
