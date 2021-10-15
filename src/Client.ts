@@ -175,14 +175,18 @@ class Client extends Discord.Client {
                 }
             }
             catch {}
+            let args = null
             const guild = this.guilds_settings.get(message.guild.id)
-            if (guild && guild.prefix) {
-                if (!message.content.startsWith(guild.prefix)) return
+            if (guild?.prefix && message.content.startsWith(guild.prefix)) {
+                args = message.content.slice(guild.prefix.length).trim().split(' ').filter(e => e !== '')
             }
-            else if (!message.content.startsWith(config.prefix)) return
-            const args = message.content.slice(config.prefix.length).trim().split(' ').filter(e => e !== '')
-            const command = args.shift()?.toLowerCase()
-            if (this.commands[command]) this.commands[command](message, args)
+            else if (!message.content.startsWith(config.prefix)) {
+                args = message.content.slice(config.prefix.length).trim().split(' ').filter(e => e !== '')
+            }
+            if (args !== null) {
+                const command = args.shift()?.toLowerCase()
+                if (this.commands[command]) this.commands[command](message, args)
+            }
         })
         setTimeout(this.checkCoinbaseCharges.bind(this), 3000)
     }
@@ -241,6 +245,7 @@ class Client extends Discord.Client {
             else guild = { prefix }
             this.guilds_settings.set(message.guild.id, guild)
             this.db.guilds.put(message.guild.id, guild)
+            message.reply(`Updated prefix to: \`${prefix}\``)
         },
         market: async(message, args) => {
             const listings = []
