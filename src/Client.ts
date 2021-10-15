@@ -11,6 +11,7 @@ interface Client extends Discord.Client {
         users: any
         charges: any
         market: any
+        guilds: any
     }
     owners: Array<String>
     tcpClient
@@ -32,15 +33,16 @@ interface Client extends Discord.Client {
     TCP_API: {
         host: string
         port: number
-    },
+    }
     liveFeed: {
         blocks: Map<string, string>
         transactions: Map<string, string>
-        height
+        height: number
     }
+    guilds_settings: Map<string, { prefix: string }>
 }
 class Client extends Discord.Client {
-    constructor(chargesDB, usersDB, marketDB) {
+    constructor(chargesDB, usersDB, marketDB, guildsDB) {
         super({
             intents: [
                 Discord.Intents.FLAGS.GUILDS,
@@ -54,8 +56,17 @@ class Client extends Discord.Client {
         this.db = {
             users: usersDB,
             charges: chargesDB,
-            market: marketDB
+            market: marketDB,
+            guilds: guildsDB
         }
+        this.guilds_settings = new Map()
+        const stream = this.db.guilds.createReadStream()
+        stream.on('data', data => {
+            this.guilds_settings.set(data.key, data.value)
+        })
+        stream.on('end', () => {
+            console.log('Loaded guilds setttings, size:', this.guilds_settings.size)
+        })
         this.owners = process.env.owners?.split(',')
         console.log("owner id's", this.owners)
         const HTTP_API = process.env.HTTP_API || viscoin.config.default_env.HTTP_API
@@ -147,26 +158,31 @@ class Client extends Discord.Client {
                     channel.send(await Client.message.transaction(transaction))
                 })
             })
+            console.log('Guilds cache size:', this.guilds.cache.size)
         })
         this.on('ready', () => console.log(`Logged in as ${this.user.tag}!`))
-        this.on('message', async e => {
-            if (e.author.bot) return
+        this.on('message', async message => {
+            if (message.author.bot) return
             try {
-                const transaction = new Transaction(JSON.parse(e.content))
+                const transaction = new Transaction(JSON.parse(message.content))
                 if (transaction.isValid() === 0) {
                     const code = await HTTPApi.send(this.HTTP_API, transaction)
-                    e.react(code === 0 ? '🟢' : '🔴').then(r => {
+                    message.react(code === 0 ? '🟢' : '🔴').then(r => {
                         setTimeout(() => {
-                            e.delete()
+                            message.delete()
                         }, 3000)
                     })
                 }
             }
             catch {}
-            if (!e.content.startsWith(config.prefix)) return
-            const args = e.content.slice(config.prefix.length).trim().split(' ').filter(e => e !== '')
+            const guild = this.guilds_settings.get(message.guild.id)
+            if (guild && guild.prefix) {
+                if (!message.content.startsWith(guild.prefix)) return
+            }
+            else if (!message.content.startsWith(config.prefix)) return
+            const args = message.content.slice(config.prefix.length).trim().split(' ').filter(e => e !== '')
             const command = args.shift()?.toLowerCase()
-            if (this.commands[command]) this.commands[command](e, args)
+            if (this.commands[command]) this.commands[command](message, args)
         })
         setTimeout(this.checkCoinbaseCharges.bind(this), 3000)
     }
@@ -216,6 +232,15 @@ class Client extends Discord.Client {
         commands: (message, args) => {
             const commands = Object.keys(this.commands)
             message.reply(commands.join(', '))
+        },
+        prefix: (message, args) => {
+            if (!(message.member.permissions.bitfield & 0x8n)) return this.reject(message)
+            const prefix = args.shift()
+            let guild = this.guilds_settings.get(message.guild.id)
+            if (guild) guild.prefix = prefix
+            else guild = { prefix }
+            this.guilds_settings.set(message.guild.id, guild)
+            this.db.guilds.put(message.guild.id, guild)
         },
         market: async(message, args) => {
             const listings = []
