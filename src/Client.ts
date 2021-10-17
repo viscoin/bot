@@ -755,6 +755,7 @@ class Client extends Discord.Client {
         },
         balance: async (address, balance) => {
             const str = `https://viscoin.net/#/explorer?search=balance/${address}`
+            const url = `https://vis.gg/#/explorer/${address}`
             const buffer = await qrcode.toBuffer(str, {
                 errorCorrectionLevel: 'L'
             })
@@ -779,7 +780,7 @@ class Client extends Discord.Client {
                 ]
             })
             embed.setTitle('Click to open in Explorer')
-            embed.setURL(str)
+            embed.setURL(url)
             return {
                 files: [
                     {
@@ -847,6 +848,7 @@ class Client extends Discord.Client {
                 }
             }
             const str = `https://viscoin.net/#/explorer?search=block/${block.hash.toString('hex')}`
+            const url = `https://vis.gg/#/explorer/${block.hash.toString('hex')}`
             const buffer = await qrcode.toBuffer(str, {
                 errorCorrectionLevel: 'L'
             })
@@ -857,7 +859,7 @@ class Client extends Discord.Client {
             embed.addField('difficulty', block.difficulty.toString(), true)
             embed.addField('hash', block.hash.toString('hex'))
             embed.setThumbnail('attachment://qr.png')
-            embed.setURL(str)
+            embed.setURL(url)
             embed.setTitle('Click to open in Explorer')
             if (block.transactions[0]) embed.addField('miner', Address.toString(block.transactions[0].to))
             return {
