@@ -163,24 +163,12 @@ class Client extends Discord.Client {
         this.on('ready', () => console.log(`Logged in as ${this.user.tag}!`))
         this.on('message', async message => {
             if (message.author.bot) return
-            try {
-                const transaction = new Transaction(JSON.parse(message.content))
-                if (transaction.isValid() === 0) {
-                    const code = await HTTPApi.send(this.HTTP_API, transaction)
-                    message.react(code === 0 ? '🟢' : '🔴').then(r => {
-                        setTimeout(() => {
-                            message.delete()
-                        }, 3000)
-                    })
-                }
-            }
-            catch {}
             let args = null
             const guild = this.guilds_settings.get(message.guild.id)
             if (guild?.prefix && message.content.startsWith(guild.prefix)) {
                 args = message.content.slice(guild.prefix.length).trim().split(' ').filter(e => e !== '')
             }
-            else if (!message.content.startsWith(config.prefix)) {
+            else if (message.content.startsWith(config.prefix)) {
                 args = message.content.slice(config.prefix.length).trim().split(' ').filter(e => e !== '')
             }
             if (args !== null) {
