@@ -163,9 +163,13 @@ class Client extends Discord.Client {
         this.on('ready', () => console.log(`Logged in as ${this.user.tag}!`))
         this.on('message', async message => {
             if (message.author.bot) return
+            const mention = `<@!${this.user.id}>`
             let args = null
             const guild = this.guilds_settings.get(message.guild.id)
-            if (guild?.prefix) {
+            if (message.content.startsWith(mention)) {
+                args = message.content.slice(mention.length).trim().split(' ').filter(e => e !== '')
+            }
+            else if (guild?.prefix) {
                 if (message.content.startsWith(guild.prefix)) {
                     args = message.content.slice(guild.prefix.length).trim().split(' ').filter(e => e !== '')
                 }
