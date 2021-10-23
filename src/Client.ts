@@ -165,8 +165,10 @@ class Client extends Discord.Client {
             if (message.author.bot) return
             let args = null
             const guild = this.guilds_settings.get(message.guild.id)
-            if (guild?.prefix && message.content.startsWith(guild.prefix)) {
-                args = message.content.slice(guild.prefix.length).trim().split(' ').filter(e => e !== '')
+            if (guild?.prefix) {
+                if (message.content.startsWith(guild.prefix)) {
+                    args = message.content.slice(guild.prefix.length).trim().split(' ').filter(e => e !== '')
+                }
             }
             else if (message.content.startsWith(config.prefix)) {
                 args = message.content.slice(config.prefix.length).trim().split(' ').filter(e => e !== '')
