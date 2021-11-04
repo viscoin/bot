@@ -748,17 +748,17 @@ class Client extends Discord.Client {
             }
         },
         balance: async (address, balance) => {
-            const str = `https://viscoin.net/#/explorer?search=balance/${address}`
+            // const str = `https://viscoin.net/#/explorer?search=balance/${address}`
             const url = `https://vis.gg/#/explorer/${address}`
-            const buffer = await qrcode.toBuffer(str, {
-                errorCorrectionLevel: 'L'
-            })
+            // const buffer = await qrcode.toBuffer(str, {
+            //     errorCorrectionLevel: 'L'
+            // })
             if (balance.includes('.')) balance = `**${balance.split('.')[0]}**.${balance.split('.')[1]}`
             else balance = `**${balance}**`
             const embed = new Discord.MessageEmbed({
-                thumbnail: {
-                    url: 'attachment://qr.png'
-                },
+                // thumbnail: {
+                //     url: 'attachment://qr.png'
+                // },
                 color: balance === '0' ? '#a30000' : '#00a300',
                 fields: [
                     {
@@ -773,15 +773,15 @@ class Client extends Discord.Client {
                     }
                 ]
             })
-            embed.setTitle('Click to open in Explorer')
+            embed.setTitle('Open in Explorer')
             embed.setURL(url)
             return {
-                files: [
-                    {
-                        name: 'qr.png',
-                        attachment: buffer
-                    }
-                ],
+                // files: [
+                //     {
+                //         name: 'qr.png',
+                //         attachment: buffer
+                //     }
+                // ],
                 embeds: [
                     embed
                 ]
@@ -807,25 +807,25 @@ class Client extends Discord.Client {
                     ]
                 }
             }
-            const str = `https://viscoin.net/#/explorer?search=block/transaction/${base58.encode(transaction.signature)}`
-            const buffer = await qrcode.toBuffer(str, {
-                errorCorrectionLevel: 'L'
-            })
+            // const str = `https://viscoin.net/#/explorer?search=block/transaction/${base58.encode(transaction.signature)}`
+            // const buffer = await qrcode.toBuffer(str, {
+            //     errorCorrectionLevel: 'L'
+            // })
             embed.setTimestamp(transaction.timestamp)
             if (transaction.from) embed.addField('from', Address.toString(transaction.from), true)
             if (transaction.to) embed.addField('to', Address.toString(transaction.to), true)
             if (transaction.amount) embed.addField('amount', transaction.amount, true)
             embed.addField('fee', transaction.minerFee, true)
-            embed.setThumbnail('attachment://qr.png')
-            embed.setURL(str)
-            embed.setTitle('Click to open in Explorer')
+            // embed.setThumbnail('attachment://qr.png')
+            // embed.setURL(str)
+            // embed.setTitle('Click to open in Explorer')
             return {
-                files: [
-                    {
-                        name: 'qr.png',
-                        attachment: buffer
-                    }
-                ],
+                // files: [
+                //     {
+                //         name: 'qr.png',
+                //         attachment: buffer
+                //     }
+                // ],
                 embeds: [
                     embed
                 ]
@@ -841,28 +841,28 @@ class Client extends Discord.Client {
                     ]
                 }
             }
-            const str = `https://viscoin.net/#/explorer?search=block/${block.hash.toString('hex')}`
+            // const str = `https://viscoin.net/#/explorer?search=block/${block.hash.toString('hex')}`
             const url = `https://vis.gg/#/explorer/${block.hash.toString('hex')}`
-            const buffer = await qrcode.toBuffer(str, {
-                errorCorrectionLevel: 'L'
-            })
+            // const buffer = await qrcode.toBuffer(str, {
+            //     errorCorrectionLevel: 'L'
+            // })
             embed.setColor(block.hash.toString('hex').slice(-6))
             embed.setTimestamp(block.timestamp)
             embed.addField('height', block.height.toString(), true)
             embed.addField('transactions', block.transactions.length.toString(), true)
             embed.addField('difficulty', block.difficulty.toString(), true)
             embed.addField('hash', block.hash.toString('hex'))
-            embed.setThumbnail('attachment://qr.png')
+            // embed.setThumbnail('attachment://qr.png')
             embed.setURL(url)
-            embed.setTitle('Click to open in Explorer')
+            embed.setTitle('Open in Explorer')
             if (block.transactions[0]) embed.addField('miner', Address.toString(block.transactions[0].to))
             return {
-                files: [
-                    {
-                        name: 'qr.png',
-                        attachment: buffer
-                    }
-                ],
+                // files: [
+                //     {
+                //         name: 'qr.png',
+                //         attachment: buffer
+                //     }
+                // ],
                 embeds: [
                     embed
                 ]
@@ -884,7 +884,7 @@ class Client extends Discord.Client {
             //     errorCorrectionLevel: 'L'
             // })
             const embed = new Discord.MessageEmbed({
-                title: 'Click to open Payment',
+                title: 'Open Payment',
                 color: '#1652f0',
                 description: `This will add **${charge.metadata.amount}** credits to <@${charge.metadata.userId}>'s balance.\n\n*The payment is processed by commerce.coinbase.com. This is not an exchange but only a way to purchase Viscoin with other crypto. The prices are set by the bot owner.*`,
                 thumbnail: {
